@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión · Finanzas Personales</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="auth-body">
+
+    <div class="auth-card">
+        <div class="auth-head">
+            <h1 class="auth-logo">💸 Finanzas<span>Personales</span></h1>
+            <p class="auth-sub">Gestiona tus ingresos, gastos y ahorro</p>
+        </div>
+
+        <!-- Tabs -->
+        <div class="auth-tabs">
+            <button class="auth-tab active" id="tab-login">Iniciar sesión</button>
+            <button class="auth-tab" id="tab-registro">Registrarse</button>
+        </div>
+
+        <!-- Login -->
+        <form id="form-login" class="auth-form">
+            <div class="field">
+                <label for="login-correo">Correo</label>
+                <input type="email" id="login-correo" placeholder="tu@correo.com" required>
+            </div>
+            <div class="field">
+                <label for="login-contrasena">Contraseña</label>
+                <input type="password" id="login-contrasena" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn btn-primary auth-submit">Entrar</button>
+            <p class="auth-error" id="login-error"></p>
+        </form>
+
+        <!-- Registro -->
+        <form id="form-registro" class="auth-form" style="display:none;">
+            <div class="field">
+                <label for="reg-nombre">Nombre</label>
+                <input type="text" id="reg-nombre" placeholder="Tu nombre" required>
+            </div>
+            <div class="field">
+                <label for="reg-correo">Correo</label>
+                <input type="email" id="reg-correo" placeholder="tu@correo.com" required>
+            </div>
+            <div class="field">
+                <label for="reg-contrasena">Contraseña (mín. 8 caracteres)</label>
+                <input type="password" id="reg-contrasena" placeholder="••••••••" minlength="8" required>
+            </div>
+            <button type="submit" class="btn btn-primary auth-submit">Crear cuenta</button>
+            <p class="auth-error" id="registro-error"></p>
+        </form>
+
+        <p class="auth-hint">Al registrarte se crean categorías por defecto para tu cuenta.</p>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="js/ui.js"></script>
+    <script src="js/auth.js"></script>
+</body>
+</html>

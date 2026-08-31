@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finanzas Personales · Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <!-- Encabezado -->
+    <header class="app-header">
+        <div class="header-inner">
+            <h1 class="logo">💸 Finanzas<span>Personales</span></h1>
+            <div class="user-chip">
+                <span class="avatar" id="user-avatar">U</span>
+                <span id="user-nombre">Usuario</span>
+                <button class="logout-btn" id="btn-logout" title="Cerrar sesión">Salir</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+
+        <!-- Tarjetas KPIs -->
+        <section class="kpis" aria-label="Indicadores clave">
+            <div class="card kpi kpi-ingreso">
+                <span class="kpi-icon">💰</span>
+                <div>
+                    <p class="kpi-label">Total Ingresos</p>
+                    <p class="kpi-value" id="card-ingresos">$0</p>
+                </div>
+            </div>
+            <div class="card kpi kpi-gasto">
+                <span class="kpi-icon">🛒</span>
+                <div>
+                    <p class="kpi-label">Total Gastos</p>
+                    <p class="kpi-value" id="card-gastos">$0</p>
+                </div>
+            </div>
+            <div class="card kpi kpi-balance">
+                <span class="kpi-icon">📈</span>
+                <div>
+                    <p class="kpi-label">Balance / Ahorro</p>
+                    <p class="kpi-value" id="card-balance">$0</p>
+                    <p class="kpi-sub" id="card-porcentaje">0%</p>
+                </div>
+            </div>
+            <div class="card kpi kpi-prediccion">
+                <span class="kpi-icon">🔮</span>
+                <div>
+                    <p class="kpi-label">Predicción Próx. Mes</p>
+                    <p class="kpi-value" id="card-prediccion">$0</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Alertas de anomalías -->
+        <section id="alerta-anomalias" class="alert-box" style="display:none;">
+            <div class="alert-head">
+                <h3>⚠️ Alertas de Gastos Anómalos</h3>
+            </div>
+            <ul id="lista-anomalias"></ul>
+        </section>
+
+        <!-- Gráficos -->
+        <section class="charts-grid" aria-label="Visualizaciones">
+            <div class="card chart-container">
+                <canvas id="chartCategorias"></canvas>
+            </div>
+            <div class="card chart-container">
+                <canvas id="chartTendencia"></canvas>
+            </div>
+        </section>
+
+        <div class="content-grid">
+
+            <!-- Formulario registro movimiento -->
+            <section class="card">
+                <h2 class="section-title">Registrar Movimiento</h2>
+                <form id="form-movimiento" class="form-stack">
+                    <div class="field">
+                        <label for="tipo">Tipo</label>
+                        <select id="tipo" required>
+                            <option value="gasto">Gasto</option>
+                            <option value="ingreso">Ingreso</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="categoria">Categoría</label>
+                        <select id="categoria" required></select>
+                    </div>
+                    <div class="field">
+                        <label for="monto">Monto</label>
+                        <input type="number" id="monto" placeholder="0.00" step="0.01" min="0.01" required>
+                    </div>
+                    <div class="field">
+                        <label for="fecha">Fecha</label>
+                        <input type="date" id="fecha" required>
+                    </div>
+                    <div class="field field-full">
+                        <label for="descripcion">Descripción</label>
+                        <input type="text" id="descripcion" placeholder="Detalle opcional">
+                    </div>
+                    <button type="submit" class="btn btn-primary field-full">Guardar Movimiento</button>
+                </form>
+            </section>
+
+            <!-- Gestión de categorías -->
+            <section class="card">
+                <h2 class="section-title">Gestionar Categorías</h2>
+                <form id="form-categoria" class="form-inline">
+                    <input type="text" id="nombre-categoria" placeholder="Nombre (ej. Vivienda)" required>
+                    <select id="tipo-categoria">
+                        <option value="gasto">Gasto</option>
+                        <option value="ingreso">Ingreso</option>
+                    </select>
+                    <button type="submit" class="btn btn-secondary">Añadir</button>
+                </form>
+                <ul id="lista-categorias" class="cat-list"></ul>
+            </section>
+
+        </div>
+
+        <!-- Tabla de movimientos -->
+        <section class="card table-card">
+            <div class="table-head">
+                <h2 class="section-title">Movimientos</h2>
+                <div class="filters">
+                    <input type="date" id="filtro-desde" title="Desde">
+                    <input type="date" id="filtro-hasta" title="Hasta">
+                    <select id="filtro-categoria" title="Categoría">
+                        <option value="">Todas</option>
+                    </select>
+                    <button class="btn btn-ghost" id="btn-limpiar-filtros">Limpiar</button>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Tipo</th>
+                            <th>Categoría</th>
+                            <th>Descripción</th>
+                            <th class="text-right">Monto</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-movimientos"></tbody>
+                </table>
+            </div>
+            <p class="empty-msg" id="msg-vacio" style="display:none;">No hay movimientos que mostrar.</p>
+        </section>
+
+        <footer class="app-footer">
+            <p>Proyecto de Aula · Finanzas Personales con Dashboard Analítico</p>
+        </footer>
+
+    </main>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="js/ui.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/forms.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

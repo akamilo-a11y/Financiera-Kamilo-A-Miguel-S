@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+mysql-connector-python
+pandas>=2.3
+numpy>=2.3
+scikit-learn
+bcrypt
+PyJWT
+pydantic[email]
+python-multipart
