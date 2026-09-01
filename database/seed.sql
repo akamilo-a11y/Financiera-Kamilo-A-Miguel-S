@@ -1,5 +1,3 @@
-USE finanzas_personales;
-
 -- Usuario de prueba (contraseña: "clave1234" hasheada con bcrypt)
 INSERT INTO usuarios (nombre, correo, contrasena_hash)
 VALUES ('Ana Torres', 'ana@example.com', '$2b$12$wgZLhNJa6yELmHkfjGRIM.MPnP6SnfjlH7n7DH4o4XSi6kkr8645u');

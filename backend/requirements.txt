@@ -1,6 +1,6 @@
 fastapi
 uvicorn[standard]
-mysql-connector-python
+psycopg2-binary
 pandas>=2.3
 numpy>=2.3
 scikit-learn

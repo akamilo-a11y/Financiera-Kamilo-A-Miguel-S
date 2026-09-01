@@ -17,7 +17,8 @@ from pydantic import BaseModel, Field
 
 import bcrypt
 import jwt
-import mysql.connector
+import psycopg2
+import psycopg2.extras
 import pandas as pd
 
 from database import get_db
@@ -140,10 +141,10 @@ def crear_usuario(u: UsuarioCreate):
 
         hash_pw = bcrypt.hashpw(u.contrasena.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
         cursor.execute(
-            "INSERT INTO usuarios (nombre, correo, contrasena_hash) VALUES (%s, %s, %s)",
+            "INSERT INTO usuarios (nombre, correo, contrasena_hash) VALUES (%s, %s, %s) RETURNING id_usuario",
             (u.nombre, u.correo, hash_pw)
         )
-        id_usuario = cursor.lastrowid
+        id_usuario = cursor.fetchone()[0]
 
         # Crear categorías por defecto para el nuevo usuario
         for nombre, tipo in CATEGORIAS_DEFECTO:
@@ -156,7 +157,7 @@ def crear_usuario(u: UsuarioCreate):
     except HTTPException:
         db.rollback()
         raise
-    except mysql.connector.Error as err:
+    except psycopg2.Error as err:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(err))
     finally:
@@ -167,7 +168,7 @@ def crear_usuario(u: UsuarioCreate):
 def iniciar_sesion(l: LoginSchema):
     """Verifica correo/contraseña y devuelve los datos del usuario autenticado."""
     db = get_db()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     try:
         cursor.execute(
             "SELECT id_usuario, nombre, correo, contrasena_hash FROM usuarios WHERE correo = %s",
@@ -205,12 +206,13 @@ def crear_categoria(c: CategoriaCreate, id_usuario_autenticado: int = Depends(ve
     cursor = db.cursor()
     try:
         cursor.execute(
-            "INSERT INTO categorias (nombre, tipo, id_usuario) VALUES (%s, %s, %s)",
+            "INSERT INTO categorias (nombre, tipo, id_usuario) VALUES (%s, %s, %s) RETURNING id_categoria",
             (c.nombre, c.tipo, c.id_usuario)
         )
+        id_categoria = cursor.fetchone()[0]
         db.commit()
-        return {"id_categoria": cursor.lastrowid, "mensaje": "Categoría creada"}
-    except mysql.connector.Error as err:
+        return {"id_categoria": id_categoria, "mensaje": "Categoría creada"}
+    except psycopg2.Error as err:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(err))
     finally:
@@ -222,7 +224,7 @@ def listar_categorias(id_usuario: int, id_usuario_autenticado: int = Depends(ver
     """RF02: Obtener categorías asociadas a un usuario."""
     autorizar_usuario(id_usuario, id_usuario_autenticado)
     db = get_db()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cursor.execute(
         "SELECT * FROM categorias WHERE id_usuario = %s ORDER BY nombre",
         (id_usuario,)
@@ -275,7 +277,7 @@ def actualizar_categoria(id_categoria: int, c: CategoriaUpdate, id_usuario_auten
     except HTTPException:
         db.rollback()
         raise
-    except mysql.connector.Error as err:
+    except psycopg2.Error as err:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(err))
     finally:
@@ -315,7 +317,7 @@ def eliminar_categoria(id_categoria: int, id_usuario_autenticado: int = Depends(
     except HTTPException:
         db.rollback()
         raise
-    except mysql.connector.Error as err:
+    except psycopg2.Error as err:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(err))
     finally:
@@ -341,12 +343,14 @@ def registrar_movimiento(m: MovimientoCreate, id_usuario_autenticado: int = Depe
         cursor.execute(
             """INSERT INTO ingresos_gastos
                (id_usuario, id_categoria, tipo, monto, fecha, descripcion)
-               VALUES (%s, %s, %s, %s, %s, %s)""",
+               VALUES (%s, %s, %s, %s, %s, %s)
+               RETURNING id_movimiento""",
             (m.id_usuario, m.id_categoria, m.tipo, m.monto, m.fecha, m.descripcion)
         )
+        id_movimiento = cursor.fetchone()[0]
         db.commit()
-        return {"id_movimiento": cursor.lastrowid, "mensaje": "Movimiento registrado"}
-    except mysql.connector.Error as err:
+        return {"id_movimiento": id_movimiento, "mensaje": "Movimiento registrado"}
+    except psycopg2.Error as err:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(err))
     finally:
@@ -364,7 +368,7 @@ def listar_movimientos(
     """RF04: Listar movimientos con filtros por rango de fechas y categoría."""
     autorizar_usuario(id_usuario, id_usuario_autenticado)
     db = get_db()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     query = (
         "SELECT m.*, c.nombre AS categoria, c.tipo AS tipo_categoria "
         "FROM ingresos_gastos m "
@@ -433,7 +437,7 @@ def actualizar_movimiento(id_movimiento: int, m: MovimientoUpdate, id_usuario_au
     except HTTPException:
         db.rollback()
         raise
-    except mysql.connector.Error as err:
+    except psycopg2.Error as err:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(err))
     finally:
@@ -472,7 +476,7 @@ def obtener_resumen(
     """RF05: Total ingresos, gastos y balance neto (con filtro opcional por mes YYYY-MM)."""
     autorizar_usuario(id_usuario, id_usuario_autenticado)
     db = get_db()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     query = """
         SELECT
             SUM(CASE WHEN tipo = 'ingreso' THEN monto ELSE 0 END) AS total_ingresos,
@@ -482,7 +486,7 @@ def obtener_resumen(
     """
     params = [id_usuario_autenticado]
     if mes:
-        query += " AND DATE_FORMAT(fecha, '%Y-%m') = %s"
+        query += " AND TO_CHAR(fecha, 'YYYY-MM') = %s"
         params.append(mes)
 
     cursor.execute(query, tuple(params))
@@ -506,7 +510,7 @@ def distribucion_por_categoria(id_usuario: int, id_usuario_autenticado: int = De
     """RF06: Distribución de gastos por categoría (para el gráfico de dona)."""
     autorizar_usuario(id_usuario, id_usuario_autenticado)
     db = get_db()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cursor.execute(
         """SELECT c.nombre AS categoria, SUM(m.monto) AS total
            FROM ingresos_gastos m
@@ -527,9 +531,9 @@ def tendencia_mensual(id_usuario: int, id_usuario_autenticado: int = Depends(ver
     """RF07: Tendencia de ingresos vs gastos por mes (para el gráfico de líneas)."""
     autorizar_usuario(id_usuario, id_usuario_autenticado)
     db = get_db()
-    cursor = db.cursor(dictionary=True)
+    cursor = db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     cursor.execute(
-        """SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes,
+        """SELECT TO_CHAR(fecha, 'YYYY-MM') AS mes,
                   tipo,
                   SUM(monto) AS total
            FROM ingresos_gastos
